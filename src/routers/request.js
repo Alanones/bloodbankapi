@@ -67,7 +67,7 @@ router.get("/requests", admin, async (req, res) => {
 
 router.get("/requests/me", auth, async (req, res) => {
   try {
-    const requests = await Request.find({ owner: req.user._id }).populate("bank", "name");;
+    const requests = await Request.find({ owner: req.user._id }).populate("bank", "name").sort({ createdAt: -1 });
     res.send(requests)
   } catch (e) {
     res.status(500).send();
