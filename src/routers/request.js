@@ -11,7 +11,12 @@ router.post("/requests", auth, async (req, res) => {
   let rem = quantity;
 
   try {
-    const units = await Blood.find({ bloodType: blood });
+    const units = await Blood.find({
+      bloodType: blood,
+      expiry: {
+        $gte: new Date(),
+      },
+    }).sort("expiry");
     if (units.length === 0) {
       status = "Pending";
     } else if (units[0].quantity > rem) {
@@ -44,7 +49,6 @@ router.post("/requests", auth, async (req, res) => {
   } catch (err) {
     console.log(err);
   }
-
   try {
     // When you have a request that has been partially fullfiled.
     if (rem < quantity && rem !== 0) {
