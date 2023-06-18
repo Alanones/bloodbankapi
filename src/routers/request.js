@@ -6,32 +6,37 @@ const admin = require("../middleware/admin");
 
 const router = Router();
 router.post("/requests", auth, async (req, res) => {
-  console.log();
   const { blood, quantity, bank, date } = req.body;
   let status = "Pending";
-  let newQnty = 0;
-  let qty = 0;
+  let rem = quantity;
 
   try {
     const units = await Blood.find({ bloodType: blood });
     if (units.length === 0) {
       status = "Pending";
-    }
-
-    // Assignment
-    if (units[0].quantity >= quantity) {
+    } else if (units[0].quantity > rem) {
       status = "Approved";
-      newQnty = units[0].quantity - quantity;
-      await Blood.findOneAndUpdate({ _id: units[0]._id }, { quantity: newQnty });
+      await Blood.findOneAndUpdate({ _id: units[0]._id }, { $inc: { quantity: -rem } });
+    } else if (units[0].quantity === rem) {
+      status = "Approved";
+      await Blood.findByIdAndRemove(units[0]._id);
     } else {
-      for (let i = 0; i < units; i++) {
-        qty += units[i].quantity;
-        if (qty <= quantity) {
+      /**
+       * Not optimized for large orders.
+       * For large orders, we need to ensure that either available units are not deleted
+       * or create a new entry with the pending quantity to be fullfilled.
+       */
+
+      for (let i = 0; i < units.length; i++) {
+        if (rem >= units[i].quantity) {
+          rem -= units[i].quantity;
+          await Blood.findByIdAndRemove(units[i]._id);
+        } else if (rem === 0) {
           status = "Approved";
-          await Blood.findOneAndUpdate({ _id: units[i]._id }, { quantity: qty });
-          for (let j = 0; i < units[i]; j++) {
-            await Blood.findByIdAndDelete(units[i][j]._id);
-          }
+          break;
+        } else {
+          status = "Approved";
+          await Blood.findOneAndUpdate({ _id: units[i]._id }, { $inc: { quantity: -rem } });
           break;
         }
       }
@@ -40,17 +45,39 @@ router.post("/requests", auth, async (req, res) => {
     console.log(err);
   }
 
-  const request = new Request({
-    blood,
-    quantity,
-    bank,
-    status,
-    date,
-    owner: req.user._id,
-  });
   try {
-    await request.save();
-    res.status(201).send(request);
+    // When you have a request that has been partially fullfiled.
+    if (rem < quantity && rem !== 0) {
+      const request1 = new Request({
+        blood,
+        quantity: quantity - rem,
+        bank,
+        status: "Approved",
+        date,
+        owner: req.user._id,
+      });
+      await request1.save();
+      const request2 = new Request({
+        blood,
+        quantity: rem,
+        bank,
+        status: "Pending",
+        date,
+        owner: req.user._id,
+      });
+      request2.save();
+    } else {
+      const request = new Request({
+        blood,
+        quantity,
+        bank,
+        status,
+        date,
+        owner: req.user._id,
+      });
+      await request.save();
+    }
+    res.status(201).send({ success: "Request successfully completed" });
   } catch (e) {
     res.status(400).send(e);
   }
@@ -68,7 +95,7 @@ router.get("/requests", admin, async (req, res) => {
 router.get("/requests/me", auth, async (req, res) => {
   try {
     const requests = await Request.find({ owner: req.user._id }).populate("bank", "name").sort({ createdAt: -1 });
-    res.send(requests)
+    res.send(requests);
   } catch (e) {
     res.status(500).send();
   }
