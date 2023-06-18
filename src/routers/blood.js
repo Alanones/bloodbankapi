@@ -38,11 +38,16 @@ router.get("/bloods/:id", admin, async (req, res) => {
   }
 });
 
-// blood units for specific hospital
+// blood units for specific bank
 router.get("/bank-blood/:id", auth, async (req, res) => {
   const _id = req.params.id;
   try {
-    const blood = await Blood.find({ bank: _id });
+    const blood = await Blood.find({
+      bank: _id,
+      expiry: {
+        $gte: new Date(),
+      },
+    }).sort("expiry");
     if (!blood) {
       return res.status(404).send("Request not found");
     }

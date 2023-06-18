@@ -13,6 +13,7 @@ router.post("/requests", auth, async (req, res) => {
   try {
     const units = await Blood.find({
       bloodType: blood,
+      bank: bank,
       expiry: {
         $gte: new Date(),
       },
