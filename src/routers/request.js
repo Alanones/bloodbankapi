@@ -41,6 +41,7 @@ router.post("/requests", auth, async (req, res) => {
           status = "Approved";
           break;
         } else {
+          rem = 0;
           status = "Approved";
           await Blood.findOneAndUpdate({ _id: units[i]._id }, { $inc: { quantity: -rem } });
           break;
