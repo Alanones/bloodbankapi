@@ -56,11 +56,11 @@ router.get("/users/me", auth, async (req, res) => {
 
 // Get all users
 router.get("/users", admin, async (req, res) => {
-  const users = await User.find({});
+  const users = await User.find({ isAdmin: { $ne: "true" } });
   res.send(users);
 });
 
-router.patch("/users/me", auth, async (req, res) => {
+router.patch("/edit-user", admin, async (req, res) => {
   const updates = Object.keys(req.body);
   const allowedUpdates = ["name", "age", "email", "password"];
   const isValidUpdate = updates.every((update) => allowedUpdates.includes(update));
@@ -81,17 +81,6 @@ router.patch("/users/me", auth, async (req, res) => {
   }
 });
 
-router.delete("/users/:id", admin, async (req, res) => {
-  try {
-    const user = await User.findByIdRemove(req.params._id);
-    if (!user) {
-      return res.status(400).send();
-    }
-    res.send(user);
-  } catch (e) {
-    res.status(401).send(e);
-  }
-});
 router.delete("/users/me", auth, async (req, res) => {
   try {
     // const user = await User.findByIdAndDelete(req.user._id);
@@ -100,6 +89,21 @@ router.delete("/users/me", auth, async (req, res) => {
     // }
     await req.user.remove();
     res.send(req.user);
+  } catch (e) {
+    res.status(401).send(e);
+  }
+});
+
+router.delete("/delete-user/:id", admin, async (req, res) => {
+  try {
+    const user = await User.findOne({
+      _id: req.params.id,
+    });
+    if (!user) {
+      return res.status(404).send();
+    }
+    await user.remove();
+    res.send(user);
   } catch (e) {
     res.status(401).send(e);
   }
