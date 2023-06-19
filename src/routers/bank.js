@@ -49,7 +49,7 @@ router.get("/banks/:id", auth, async (req, res) => {
 
 router.patch("/banks/:id", admin, async (req, res) => {
   const updates = Object.keys(req.body);
-  const allowed = ["name", "region"];
+  const allowed = ["name", "address"];
   const isAllowed = updates.every((update) => allowed.includes(update));
   if (!isAllowed) {
     return res.status(400).send({ error: "Invalid update" });
