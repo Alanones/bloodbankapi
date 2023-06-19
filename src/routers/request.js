@@ -91,7 +91,7 @@ router.post("/requests", auth, async (req, res) => {
 
 router.get("/requests", admin, async (req, res) => {
   try {
-    const requests = await Request.find();
+    const requests = await Request.find().populate("owner", "name location").sort({ createdAt: -1 })
     res.send(requests);
   } catch (e) {
     res.status(500).send();

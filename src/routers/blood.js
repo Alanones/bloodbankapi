@@ -47,7 +47,9 @@ router.get("/bank-blood/:id", auth, async (req, res) => {
       expiry: {
         $gte: new Date(),
       },
-    }).sort("expiry");
+    })
+      .populate("bank", "name")
+      .sort("expiry");
     if (!blood) {
       return res.status(404).send("Request not found");
     }
